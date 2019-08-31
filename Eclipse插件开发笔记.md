@@ -1146,3 +1146,18 @@ final Menu fileMenu = new Menu(fileMenuItem);
 fileMenuItem.setMenu(fileMenu);
 ```
 
+### 4.8	CoolBar和CoolItem
+
+可以拖动改变位置的工具栏控件。与ToolBar不同，CoolBar中所有的按钮都是可以拖动以改变位置的，用户可以按照喜好自行安排工具栏中的按钮位置。ToolBar上的按钮是由ToolItem控制的，而CoolItem却只是作为一个可以拖动的容器而存在，开发者要自己向CoolItem中加入Button以创建一个工具栏按钮。作为容器，CoolItem不仅可以容纳Button，也可以容纳Text或者Combo控件。
+
+```java
+final CoolBar coolBar = new CoolBar(shell,SWT.NONE);
+coolBar.setBounds(0,0,400,30);
+final CoolItem coolItem1 = new CoolItem(coolBar,SWT.PUSH);
+final Button button1 = new Button(coolBar,SWT.NONE);
+button1.setText("button1");
+button1.setSize(25,25);
+coolItem1.setControl(button1);
+coolItme1.setSize(coolItem1.computeSize(25,25));
+```
+
