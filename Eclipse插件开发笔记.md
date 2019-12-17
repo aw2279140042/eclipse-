@@ -331,3 +331,31 @@ public class HelloShell extends Shell{
 
 #### 2.5.2	SWT程序的打包发布
 
+本节将前面的项目打包发布，使其能够脱离Eclipse单独运行。首先，需要将完成的SWT项目从Eclipse中导出成JAR文件。然后使用`java -jar 文件`运行程序。
+
+## 3	SWT编程基础
+
+### 3.1	Display和Shell
+
+编写图形界面程序的第一步是要为界面创建一个窗口。下面的代码创建了一个空白的窗口
+
+```java
+public static void main(String[] args){
+	Display display = Display.getDefault();
+	Shell shell = new Shell(display);
+	shell.setSize(100,100);
+	shell.open();
+	shell.layout();
+	while(!shell.isDisposed()){
+		if(!display.readAndDispatch())	display.sleep();
+	}
+}
+```
+
+这个程序分为三大部分，1：创建Display对象；2：创建并配置Shell；3：进入一个循环。
+
+#### 3.1.1	Display的创建
+
+在实例程序的开始，首先得到一个Display对象。这是所有SWT程序开始运行时都必须执行的工作。没有Display，SWT程序就无法和操作系统交互，一个SWT程序至少需要一个Display对象。创建Display对象的线程被称为UI线程。
+
+Display类提供了getDefault()方法。首次调用这个方法会创建一个Display实例，随后再次调用这个方法可以获取已创建的实例。在实例程序中由于main线程调用了Display.getDefault()方法，它就是所得到的Display对象的UI线程。
