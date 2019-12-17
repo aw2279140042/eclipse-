@@ -1,3 +1,7 @@
+---
+
+---
+
 # Eclipse插件开发笔记
 
 ## 1	Eclipse IDE环境篇
@@ -188,4 +192,142 @@ P[GUI处理原理图]
 
 - **谁分配谁释放**（If you created it,you dispose it）
 - **释放父资源时，所有子资源都会被一起释放**（Disposing the parent dispose the children）
+
+### 2.3	JFace
+
+JFace是基于SWT的一套图形工具包，它没有为SWT提供任何新的功能，只是将一些比较繁琐而且常用的图形操作封装了起来，是的开发工作变得简便。JFace完全使用SWT API进行开发，并没有涉及任何SWT中平台相关的部分，所以JFace没有不同平台版之分。JFace封装涉及的范围：
+
+```mermaid
+graph LR
+A[JFace]-->B(Viewer)
+A-->C(Resource Registry)
+A-->D(Field Assist)
+A-->E(Action & Contribution)
+A-->F(Dialogs,Wizard Page Preference Page)
+A-->G(Data Binding)
+
+```
+
+- Viewer 查看器
+- Resource Registry 资源注册表，用于管理和自动释放程序中用到的图形系统资源
+- Field Assist 字段帮助。使用它在控件附近默认显示提示性标记和内容
+- Action & Contribution 操作与贡献。这是用于控制菜单、工具栏等一套框架
+- Dialogs,Wizard Page Preference Page 对话框，向导页与首选项设置
+- Data Binding 数据绑定。将数据模型与图形界面上的控件绑定起来减少了程序为了同步它们的数据而做的重复工作
+
+#### 2.3.1    查看器
+
+查看器（Viewer）是使用MVC模式对一些复杂控件做的封装，以方便开发人员使用这些控件。目前的查看器包括列表查看器 （ListViewer）、表格查看器（TableViewer）、树查看器（TreeViewer）等。
+
+查看器将数据模型从复杂控件中抽象出来，本身作为一个控制器来监听模型的变化和控件的变化，并负责传递这些变化。开发者不需要具体操作那些复杂控件，查看器收到通知后也会发送数据模板，数据模型收到通知后可以检查这些修改并决定是否接受。查看器并没有将控件隐藏起来，开发者可以随时通过查看器提供的方法（如TableViewer的getTable方法）得到对应的底层控件对象并直接操作它。
+
+![1576570016564](Eclipse插件开发笔记.assets/1576570016564.png)
+
+#### 2.3.2	资源注册表
+
+使用SWT图形资源的一个原则就是“谁申请谁释放”，然而，正如许多C++程序员经常忘记释放数组空间而导致的内存泄露一样，当程序结构复杂的时候，要求严格执行这一点不是一件容易的事。资源注册表就是为了方便管理常用的图形资源而设计的，目前JFace包含了针对字体、颜色和图像资源的注册表
+
+![1576572281156](Eclipse插件开发笔记.assets/1576572281156.png)
+
+JFace在JFaceResources类中为这些注册表提供了采用Singleton模式的实现。使用这些资源注册表，就可以有效地避免因为忘记释放资源而导致的系统资源泄露问题。
+
+#### 2.3.3	字段帮助
+
+字段帮助（Field Assit）的目的是为最终用户提供界面指导。在设计用户界面时，程序员通常需要为用户提供一些指导信息，比如哪些字段是必填的，字段可以接受的数值类型及取值范围等的说明。
+
+字段帮助提供两种功能，一种是字段装饰（Decoration Field），另一种是内容建议（Content Proposal）。字段装饰可以让开发者在控件的四角添加图片或者颜色作为装饰，以提示用户字段的当前状态。内容建议则允许开发者在控件附近弹出一个下拉框，并在其中提供 一些内容选项供用户选择。这个提示框可以由焦点触发，也可以设置成由某个热键触发。
+
+![1576574134977](Eclipse插件开发笔记.assets/1576574134977.png)
+
+#### 2.3.4	操作和贡献
+
+操作和贡献（Action & Contribution）是用来定制菜单和工具栏的一套机制。这套机制将菜单项/工具栏按钮和它们所触发的事件分离开来，使得对用户操作响应的控制更灵活。
+
+Action对象封装了一个操作命令。当Action对象被添加到工具栏或菜单上面时，用户单击对应的工具栏按钮和菜单项就可以触发这个Action对象所代表的命令。为了可以显示在工具栏或菜单上，Action对象还包含有图标、工具提示（tooltip）等用于显示的信息。
+
+贡献由贡献项目（Contribution Item）和贡献管理器（Contribution Manager）两部分组成。操作可以用来在菜单或工具栏上添加项目，而利用操作中包含的图标等信息来显示工具栏按钮或菜单项的工作是有贡献项目完成的。贡献管理器是包含了火哥贡献项目的集合。贡献项目代表了菜单或工具栏中的一项，贡献管理器则代表了整个菜单或工具栏。JFace的贡献管理器可以用来控制菜单、工具栏和状态栏。
+
+#### 2.3.5	对话框、向导页和偏好设置
+
+在SWT的对话框控件的基础上，JFace实现了许多定制的对话框。如带图标的对话框、可以在系统托盘中显示的对话框、供用户输入的对话框等。
+
+向导页用来引导用户一步步的完成某个操作的界面；而偏好设置可用用来设计专业的用户选项卡。JFace的框架帮助开发者完成了页面切换的工作，使开发者只需要编写每一页的内容并将它们添加到框架中就可以实现向导页或偏好设置的功能。
+
+#### 2.3.6	数据绑定
+
+数据绑定是把查看器的概念扩展到了整个界面。将真个图形界面（一个窗口、一个对话框等）看成一个复杂控件，并将它关联到一个数据模型上。数据绑定功能负责监听界面上所有控件和数据模型的内容，无论哪一方发生变化时都即时通知另一方。
+
+### 2.4	Swing
+
+Swing采用了使模型和显示分离的方法。控件本省并不包含任何与绘画相关的代码，而是将绘图代码分离到另一个类“UI类”。UI类的结构和SWing控件的类型结构基本上是一一对应的。比如和JBtton（Swing的中控件）类型相对的UI类是ButtonUI。Swing将这些UI类声明为抽象类，并要求每种LookAndFeel都实现自己的UI类型，在其中添加具体负责绘制控件的图形代码。
+
+![1576576445553](Eclipse插件开发笔记.assets/1576576445553.png)
+
+### 2.5	编写并发布SWT程序
+
+​	**首先安装WindowBuilder插件**[WB_v1.5.1_UpdateSite_for_Eclipse3.7.zip](https://pan.baidu.com/s/1u-1SVUMaR0cTRrYytf4kvg) 提取码: 2em4
+
+#### 2.5.1	第一个SWT程序
+
+在Eclipse中创建一个新的项目。
+
+![1576577949941](Eclipse插件开发笔记.assets/1576577949941.png)
+
+创建java文件
+
+![1576578105229](Eclipse插件开发笔记.assets/1576578105229.png)
+
+第一个SWT程序代码
+
+```java
+public class HelloShell extends Shell{
+    private static Text text;
+    private static Button swtButton;
+    private static Button swingButton;
+    private static Button awtButton;
+    private static Group group;
+    private static Button button;
+    private static Label benefitOfSwtLabel;
+    private static List list;
+    public static void main(String[] args){
+        //界面线程对象
+        Display display = Display.getDefault();
+        final Shell shell = new Shell(display);
+        shell.setText("hello shell");
+        shell.setSize(260,283);
+        shell.open();
+        text = new Text(shell,SWT.BORDER);
+        text.setText("SWT是Eclipse平台使用的图形工具箱");
+        //设置控件在窗口中的位置在上顶点为（10，8）宽度为230，高度为35
+        text.setBounds(10,8,230,35);
+        //List控件可以在界面上展示一系列的内容。
+        list = new List(shell,SWT.BORDER);
+        list.setItems(new String[]{"使用操作系统本地的控件","提供一套平台无关的API","GUI程序的运行速度快","更多更多....."});
+        list.setBounds(10,68,232,82);
+        benefitOfSwtLabel = new Label(shell,SWT.NONE);
+        benefitOfSwtLabel.setText("SWT的优点");
+        benefitOfSwtLabel.setBounds(10,49,90,15);
+        //Group对象可以用来把相关的控件包装成一个组，在这组控件外面会显示一个边框，将它们与其他控件隔离开。
+        group = new Group(shell,SWT.NONE);
+        group.setText("你使用过哪些图形工具");
+        group.setBounds(10,20,54,18);
+        swingButton = new Button(group,SWT.CHECK);
+        swingButton.addSelectionListener(new SelectionAdaptor(){
+            public void widgetSelected(final SelectionEvent e){
+                MessageBox msgBox = new MessageBox(shell,SWT.ICON_INFORMATION);
+                msgBox.setMessage("hello swt");
+                msgBox.open();
+            }
+        });
+        swingButton.setText("来点击一下");
+        swingButton.setBounds(70,22,60,15);
+        shell.layout();
+        while(!shell.isDisposed()){
+            if(!display.readAndDispatch())	display.sleep();
+        }
+    }
+}
+```
+
+#### 2.5.2	SWT程序的打包发布
 
