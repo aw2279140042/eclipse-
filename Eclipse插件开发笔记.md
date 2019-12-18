@@ -1,8 +1,4 @@
----
-
----
-
-# Eclipse插件开发笔记
+# Eclipse插件开发笔记	开发基础
 
 ## 1	Eclipse IDE环境篇
 
@@ -359,3 +355,95 @@ public static void main(String[] args){
 在实例程序的开始，首先得到一个Display对象。这是所有SWT程序开始运行时都必须执行的工作。没有Display，SWT程序就无法和操作系统交互，一个SWT程序至少需要一个Display对象。创建Display对象的线程被称为UI线程。
 
 Display类提供了getDefault()方法。首次调用这个方法会创建一个Display实例，随后再次调用这个方法可以获取已创建的实例。在实例程序中由于main线程调用了Display.getDefault()方法，它就是所得到的Display对象的UI线程。
+
+
+
+#### 3.1.3	Display的时间队列和事件循环
+
+创建一个窗口并打开它以后，示例就进入事件循环（Event Loop）部分，代码如下所示。
+
+```java
+while(!shell.isDisposed()){
+	if(!display.readAndDispatch())	display.sleep();
+}
+```
+
+在分析时间循环的代码之前，首先需要对Display的事件处理机制有个整体的认识。常见的图形界面操作系统会为每一个GUI程序分配一个事件队列，用户操作鼠标或键盘时，操作系统负责将这些事件放到对应的程序事件队列中。
+
+但是除了系统事件之外，程序可能还希望在时间循环中处理一些自定义的事件。为此，Display额外维护了一个应用程序级别的时间队列，自定义的事件可以被添加到这个队列中。在Display的事件循环中，同时处理着系统队列和自定义队列中的事件。
+
+下面代码是readAndDispatch()方法的内容，这个调用了很多org.eclipse.swt.internal.win32.OS类上面的方法。OS是SWT用来包装操作系统API的类型，它的函数都是JNI的接口，而且与操作系统API一一对应。
+
+```java
+public boolean readAndDispatch(){
+	checkDevice();
+	drawMenuBars();
+	runPopups();
+	if(OS.PeekMessage(msg,0,0,0,OS.PM_REMOVE)){
+		if(!filterMessage(msg)){
+			OS.TranslateMessage(msg);
+			OS.DispatchMessage(msg);
+		}
+		runDeferredEvents();
+		return true;
+	}
+	return runMessages && runAsyncMessages(false);
+}
+```
+
+首先从事件队列中将事件读取出来（PeekMessage），经过必要的翻译后（TranslateMessage）发送到窗口处理(DispatchMessage)。
+
+在调用操作系统API转发消息之前，SWT还使用filterMessage方法对消息事件做了过滤。在通常情况下，发送到窗口中控件的事件都会交由窗口的消息处理函数统一处理。如果事件是发送到某一个特定控件（如按钮、菜单等）的，这个方法允许控件“吃掉”这个事件而不发送到主窗口。如果在菜单和它的窗口中为同一个快捷键设置了不同的功能，打开菜单时，快捷键消息就会被菜单捕捉下来而不发送到窗口。
+
+SWT的事件循环中，方法runDeferredEvents()和runAsyncMessages()负责处理Display的自定义事件。
+
+Display.readAndDispatch()的流程，首先是从系统事件队列中读取消息，如果在程序的事件队列中读到事件，就将它发送到窗口去处理；如果在线程交互的事件队列中有需要执行的事件，就去执行它。
+
+如果readAndDispatch返回false，事件循环就会调用Display的sleep()方法。sleep()方法内容如下
+
+```java
+public boolean sleep(){
+	checkDevice();
+    if(runMessages && getMessageCount()!=0)	return true;
+    if(OS.IsWince){
+        OS.MsgWaitForMultipleObjectsEx(0,0,OS.INFINITE,OS.QS_ALLINPUT,OS.MWMO_INPUTAVAILABLE);
+        return true;
+    }	
+    //是的当前线程UI线程休眠，这样可以将处理器让给别的线程使用。当事件队列中有新的事件传来时，UI线程会被唤醒并恢复事件循环过程
+    return OS.WaitMessage();
+}
+```
+
+#### 3.1.4	Display的生命周期
+
+一个SWT程序真正开始图形相关的操作，是从它创建一个Display实例开始的，而当程序不在需要这个Disney实例的时候，它就会被释放调。调用Disney的dispose方法，可以释放它所占用的资源。当一个Disney实例被释放时，所有它管理的Shell都会被同时释放。这也遵循着“释放父资源时子资源同时被释放”的法则。下面的代码演示了这一法则。
+
+```java
+public static void main(String[] args){
+    Display display = Display.getDefault();
+    Shell shell = new Shell(display);
+    shell.setSize(200,100);
+    Button button = new Button(shell,SWT.NONE);
+    button.setText("dispose Display");
+    button.setBounds(10,10,120,20);
+    button.addSelectionListener(new SelectionAdapter(){
+        public void widgetSelected(SelectionEvent e){
+            Display.getDefault().dispose();
+        }
+    });
+    shell.open();
+    Shell shell2 = new Shell(display);
+    shell2.setSize(200,100);
+    shell2.open();
+    while(!(shell.isDisposed() && shell2.isDisposed())){
+        if(!display.readAndDispatch())	display.sleep();
+    }
+    //使用完毕后释放Display对象
+    display.dispose();
+}
+```
+
+以上代码，使用关闭按钮（释放）任意一个窗口都不会影响另外一个。而单击“dispose Display”的按钮两个窗口都会被释放。
+
+#### 3.1.5	监视器、边界和客户区域
+
