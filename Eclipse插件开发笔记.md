@@ -175,8 +175,11 @@ graph TD
 A[用户操作鼠标]-->B{当前操作的程序}
 B-->|操作SWT程序|C(SWT编写的GUI程序事件队列)
 B-->|操作其他程序|D(其他GUI程序事件队列)
-C-->E(SWT事件循环)
-E-->F(通过JNI读取队列中的消息并处理它们)
+subgraph JVM JVM
+C-->G(JNI读取队列消息)
+G-->E(SWT事件循环)
+E-->E
+end
 P[GUI处理原理图]
 ```
 
@@ -356,7 +359,53 @@ public static void main(String[] args){
 
 Display类提供了getDefault()方法。首次调用这个方法会创建一个Display实例，随后再次调用这个方法可以获取已创建的实例。在实例程序中由于main线程调用了Display.getDefault()方法，它就是所得到的Display对象的UI线程。
 
+涉及到多个线程时，不应该使用Display.getDefault来得到当前线程所属的Display实例。这个方法在多UI线程的情况下很容易出现错误，下面代码就演示了一种常见的错误用法
 
+```java
+public static void main(String[] args){
+  Display display = Display.getDefault();
+  new Thread(){
+    public void run(){
+      //disp与display是同一个对象
+      Display disp = Display.getDefault();
+      //这里会产生一个非法线程访问的异常
+      disp.dipose();
+    }
+  }
+}
+```
+
+在开发多UI线程的程序时，推荐使用如下代码管理Display实例
+
+```java
+public static Display getThreadDisplay(){
+  return Display.getCurrent()==null?new Display():Display.getCurrent();
+}
+```
+
+#### 3.1.2	Shell的创建
+
+在SWT中，一个Shell实例就代表了一个窗口。在创建了Shell后，Shell.setSize方法设置了窗口在屏幕上的尺寸（以像素为单位）；Shell.open()方法会将窗口显示在屏幕上；而后面Shell.layout()方法则与窗口布局管理有关。
+
+Shell的构造函数
+
+|             函数申明             | 功能                         |
+| :------------------------------: | ---------------------------- |
+| Shell(Display display,int style) | 通过display实例构造一个Shell |
+|  Shell(Shell parent,int style)   | 通过shell实例构造一个Shell   |
+
+Display、Shell和Shell窗口中的组件之间的父子依赖关系如下图。当Shell被释放时子资源的Shell和组件也会被释放，当Display被释放时子资源Display、Shell和组件都会被释放。
+
+```mermaid
+graph TD
+A[Display]-->B[Display]
+A-->C[Display]
+A-->D[Shell]
+D-->E[Shell]
+D-->F[组件]
+```
+
+Shell.open()方法打开一个窗口后，它就会显示出来。使一个窗口显示的方法有两个，一个是调用Shell.close()，这个方法会关闭窗口，并释放掉其占用的系统图形资源；另一种则是Shell.setVisible(false)，这种方法只是暂时隐藏窗口，不会释放所占资源，调用Shell.setVisible(true),就可以让窗口再次显示出来。
 
 #### 3.1.3	Display的时间队列和事件循环
 
@@ -446,4 +495,89 @@ public static void main(String[] args){
 以上代码，使用关闭按钮（释放）任意一个窗口都不会影响另外一个。而单击“dispose Display”的按钮两个窗口都会被释放。
 
 #### 3.1.5	监视器、边界和客户区域
+
+使用Display.getMonitors()方法可以取得与这个Display相连的所有监视器信息，而Display.getPrimaryMonitor()则可以得到主监视器对象。监视器对象主要包含边界和客户区域两个部分。边界代表了这个监视器的屏幕大小，而客户区域则代表了显示窗口在屏幕部分大小。一般来说，由于图形操作系统桌面任务栏占掉了一部分空间，客户区域要小于边界的尺寸。
+
+```java
+public static void main(String[] args){
+  Display display = new Display();
+  Monitor monitor = display.getPrimaryMonitor();
+  //监视器的大小代表了整个桌面的大小
+  System.out.println(monitor.getClientArea());
+  //客户区域
+  System.out.println(monitor.getBounds());
+}
+```
+
+####  3.1.6	SWT程序中的多线程
+
+SWT采用了单线程模型管理绘图操作，只有UI线程才能进行空间重绘和处理事件循环等直接访问Display的操作，非UI线程试图直接操作Display则会导致一个SWT异常。
+
+简单地数据计算任务可以直接放到UI线程中执行，但在其中执行比较耗时的操作，却不是一个好的选择。下面的代码做了一个演示。
+
+```java
+public static void main(String[] args) throws Exception{
+  final Display display = display.getDefault();
+  Shell shell = new Shell(display);
+  shell.setText("Multi Thread");
+  shell.setSize(204,92);
+  final Button button = new Button(shell,SWT.NONE);
+  button.addSelectionListener(new SelectionAdapter(){
+    public void widgetSelected(final SelectionEvent e){
+      try{
+        Thread.sleep(10000);
+      }catch(InterruptedException e){
+        e.printStackTrace();
+      }
+    }
+  });
+  button.setText("点击休眠10秒");
+  button.setBounds(20,15,155,25);
+  shell.open();
+  shell.layout();
+  while(!shell.isDisposed()){
+    if(!display.readAndDispatch())play.sleep();
+  }
+}
+```
+
+执行这段程序，单击按钮之后，程序界面停止响应，直到10秒后才回复正常。如果程序执行一些稍微耗时的计算就会停止响应，这显然是用户无法接受的，这就出现了SWT的单线程模型与复杂的程序逻辑的矛盾。为了解决这个矛盾，必须为非UI线程（后台线程）提供一个途径，使它能将需要执行的操作通知UI线程。这个通知动作被称为后台线程与UI线程的同步。如图所示
+
+```sequence
+UI线程->后台线程:创建
+后台线程-->>UI线程:同步
+后台线程-->>UI线程:同步
+```
+
+Display维护了衣蛾自定义的事件队列，这个队列就是用来供后台线程和UI线程同步的。后台线程用Runnable对象将绘图操作包装起来，然后将对象插入到事件队列中，这样Display执行消息循环时就会执行这些操作了。Display提供了如下两个方法向这个队列中插入事件。
+
+| Display.syncExec(Runnable runnable)  | 同步调用，调用这个方法会通知UI线程在下一次事件循环时执行runnable参数的run方法，调用这个方法的线程将被阻塞到runnable执行完成。如果参数为null，调用这个函数会唤醒休眠中的UI线程 |
+| ------------------------------------ | ------------------------------------------------------------ |
+| Display.asyncExec(Runnable runnable) | 异步调用，调用这个方法同样通知UI线程在下一次事件循环时执行runnable参数的run方法，调用这个方法的线程不会被阻塞，而且在runnable执行完后不会得到通知。如果参数是null，调用这个函数会唤醒休眠中UI线程 |
+
+具体调用
+
+```java
+button.addSelectionListener(new SelectionAdapter(){
+  public void widgetSelected(final SelectionEvent e){
+    Thread thread = new Thread(){
+      public void run(){
+        try{
+          Thread.sleep(10000);
+        }catch(Exception e){
+          e.printStackTrace();
+        }
+        display.syncExec(new Runnable(){
+          public void run(){
+            button.setText("Exection Done");
+          }
+        });
+      }
+    };
+    thread.start();
+  }
+});
+```
+
+### 3.2	控件
 
