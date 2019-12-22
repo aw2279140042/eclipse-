@@ -608,3 +608,18 @@ Widget有两个比较重要的子类，Control类是所有控件的父类；而I
 Button、Label等简单控件都是直接继承自Control控件，Scrollable代表有滚动条的控件，它的子类有Text和Composite等；Composite被称为容器控件，这类控件的主要用途不是与用户交互，而是将容纳于其中的其他控件在界面上分组拜访，它的子类有Table、Tree等可以用来显示复杂数据结构的控件。
 
 Canvas是允许程序员使用画点、线等基本图形操作在其中直接绘图的控件。Shell间接继承自Canvas类。
+
+#### 3.2.2	控件的构造和样式
+
+可以用Control(Control parent,int style)来构造一个控件实例，其中第一个参数指明了控件的父类资源，第二个参数是控件使用的样式。下面的代码在shell代表的窗口中使用BORDER和PUSH样式创建了一个Button控件。
+
+```java
+Button button = new Button(shell,SWT.BORDER|SWT.PUSH);
+```
+
+样式控制着控件很多方面的显示和行为方式，它们可以按照用途被归类为不同的组，同属一组的样式应用时只能选择一个。对控件而言，可以在控件类的JavaDoc中找到可用样式的具体说明。
+
+如果没有没有特殊说明，子类可以使用父类的样式的。不同组的样式可以用“|”组合起来使用。
+
+#### 3.2.3	控件的继承检查
+
