@@ -580,4 +580,31 @@ button.addSelectionListener(new SelectionAdapter(){
 
 ### 3.2	控件
 
+#### 3.2.1	控件类的继承结构
 
+所有控件都是从org.eclipse.swt.widget.Control继承而来，如图所示为一些主要控件的继承结构。
+
+```mermaid
+graph BT
+Shell-->Decorations
+Decorations-->Canvas
+Table[Table表格]-->Composite[Composite容器控件]
+Tree[Tree树]-->Composite
+Canvas-->Composite
+Composite-->Scrollable
+Text[Text文本框]-->Scrollable
+TableItem-->Item
+Scrollable-->Control[Control所有控件类的父类]
+Button[Button按钮]-->Control
+Lable[Lable标签]-->Control
+Item-->Widget[Widget所有窗口组件父类]
+Control-->Widget
+```
+
+其中最上层的Widget类直接继承自Object，是SWT中所有和窗口相关部件的父类，它为所有窗口组件提供了创建对象（申请资源）、释放资源和事件监听的功能。
+
+Widget有两个比较重要的子类，Control类是所有控件的父类；而Item类则是控件的辅助部分，它代表了复杂控件中的某一项，比如表格控件中的一样就是由TableItem来表示的。
+
+Button、Label等简单控件都是直接继承自Control控件，Scrollable代表有滚动条的控件，它的子类有Text和Composite等；Composite被称为容器控件，这类控件的主要用途不是与用户交互，而是将容纳于其中的其他控件在界面上分组拜访，它的子类有Table、Tree等可以用来显示复杂数据结构的控件。
+
+Canvas是允许程序员使用画点、线等基本图形操作在其中直接绘图的控件。Shell间接继承自Canvas类。
