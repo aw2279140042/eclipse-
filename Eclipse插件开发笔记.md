@@ -623,3 +623,55 @@ Button button = new Button(shell,SWT.BORDER|SWT.PUSH);
 
 #### 3.2.3	控件的继承检查
 
+SWT继承限制是从扩展性的角度提出的，标识为“不希望被继承”的类型在以后的SWT版本中可能改变其实现方式。如果开发人员不按照这些指示去做，SWT不会保证这些程序在以后的SWT版本 中依然可用。
+
+然而JAVADOC只是文本，没有任何限制能力。如果不在代码中加以控制的话，这个提示可能被人忽略，因此SWT使用代码进行运行时的类型检查以提醒开发者。
+
+#### 3.2.4	控件的用户数据
+
+控件的用户数据是开发者自定义的一些存储在控件中的属性。这些属性是普通的Java对象，添加或者删除属性对控件的使用没有任何影响。可以使用一下方法存储用户数据。
+
+| 方法名称                        | 功能                    |
+| :------------------------------ | ----------------------- |
+| getData()                       | 读取默认用户数据        |
+| setData(Object data)            | 设置默认用户数据        |
+| getData(String key)             | 以key为标识读取用户数据 |
+| setData(String key,Object data) | 以key为标识存储用户数据 |
+
+下面的代码中创建了一个文本框并在其中显示了一篇文章内容。同时，使用用户数据存储了这篇文章的版本和作者。这些信息随时从文本框中取出来使用，但不会影响文本框的显示内容。
+
+```java
+Text text = new Text(shell,SWT.NONE);
+text.setText("Articie Content");
+text.setData("Version","1.2");
+text.setData("Author","Kent Clark");
+```
+
+#### 3.2.5	控件的释放
+
+控件也会占用系统资源，这部分资源的分配在控件的构造函数中完成。
+
+控件一般不自己释放，因为控件存在于Shell中，所以它的父资源时Shell控件，当窗口关闭的时候所有的控件都会被释放，因此不需要调用`dispose()`代码去释放控件。
+
+### 3.3	图形资源
+
+为了使程序界面更加丰富多彩，除了使用控件之外，还需要学会使用其他辅助的图形资源对象。本节介绍如何使用SWT中几种常见的图形资源，它们都继承自org.eclipse.swt.graphics.Resource。
+
+#### 3.3.1	使用Color
+
+org.eclipse.swt.graphics.Color类管理着操作系统的颜色资源。Color类使用RGB的颜色模型来描述颜色信息，每一种颜色的数据由分别代表红、绿、蓝三种原色的三个字节（int值0-255）组成。这种模型总共可以描述2^24^  种不同的颜色。一下代码创建并释放了一个代表红色的Color对象。不再需要一个Color对象的时候，一定要调用它的dispose()方法释放占用的系统资源。
+
+```java
+Color color = new Color(Display.getDefault(),255,0,0);
+//使用颜色
+Label label = new Label(shell,SWT.NONE);
+//背景色
+label.setBackground(color);
+//前景色
+label.setForeground(color);
+//释放资源
+color.dispose();
+//使用系统自带青色
+Display.getSystemColor(SWT.COLOR_CYAN);
+```
+
