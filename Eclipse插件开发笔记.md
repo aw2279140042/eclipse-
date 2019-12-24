@@ -675,3 +675,34 @@ color.dispose();
 Display.getSystemColor(SWT.COLOR_CYAN);
 ```
 
+#### 3.3.2	使用Image
+
+如果希望设置窗口的图标或在窗口中显示一幅图片，需要用到Image类，一个Image对象就代表 了一个可用的图片信息。通常有两种方式来构造一个Image对象，第一种是使用Image的构造函数指定路径读取一个图像文件或InputStream来构造一个Image，代码如下。
+
+```java
+Image image = new Image(Display.getDefault(),"C:\\graphic.bmp");
+```
+
+目前SWT可以直接读取如下的主流图像文件格式：
+
+- BMP（Windows or OS/2 Bitmap）
+- ICO（Windows Icon）
+- JPEG
+- GIF
+- PNG
+- TIFF
+
+另一种方式是使用ImageData类。ImageData包含着设备无关的图像文件信息，如图像的尺寸，每个像素的颜色、透明度等内容。可以通过指定图像的尺寸和每个像素的颜色值来生成一个ImageData，代码如下。
+
+```java
+PaletteData palette = new PaletteData(0xFF,0XFF00,0XFF0000);
+//设置RGB三种颜色的掩码
+ImageData imageData = new ImageData(48,48,24,palette);
+for(int x=0;x<48;x++){
+  for(int y=0;y<48;y++){
+    //将48*48的图像全部设置成红色
+    imageData.setPixel(x,y,0xFF);
+  }
+}
+```
+
