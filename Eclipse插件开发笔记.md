@@ -659,7 +659,7 @@ text.setData("Author","Kent Clark");
 
 #### 3.3.1	使用Color
 
-org.eclipse.swt.graphics.Color类管理着操作系统的颜色资源。Color类使用RGB的颜色模型来描述颜色信息，每一种颜色的数据由分别代表红、绿、蓝三种原色的三个字节（int值0-255）组成。这种模型总共可以描述2^24^  种不同的颜色。一下代码创建并释放了一个代表红色的Color对象。不再需要一个Color对象的时候，一定要调用它的dispose()方法释放占用的系统资源。
+org.eclipse.swt.graphics.Color类管理着操作系统的颜色资源。Color类使用RGB的颜色模型来描述颜色信息，每一种颜色的数据由分别代表红、绿、蓝三种原色的三个字节（int值0-255）组成。这种模型总共可以描述2^24^  种不同的颜色。一下代码创建并释放了一个代表红色的Color对象。不再需要一个Color对象的时候，一定要调用它的dispose()方法释放占用的系统资源。`Display.getSystemColor()`创建的对象不能释放，因为这些实例可能在其他地方被使用到，如果一处释放掉，其他使用到的地方都会出错。
 
 ```java
 Color color = new Color(Display.getDefault(),255,0,0);
@@ -669,9 +669,9 @@ Label label = new Label(shell,SWT.NONE);
 label.setBackground(color);
 //前景色
 label.setForeground(color);
-//释放资源
+//自己创建的Color释放资源
 color.dispose();
-//使用系统自带青色
+//使用系统自带青色,不能释放
 Display.getSystemColor(SWT.COLOR_CYAN);
 ```
 
@@ -704,5 +704,191 @@ for(int x=0;x<48;x++){
     imageData.setPixel(x,y,0xFF);
   }
 }
+//另一种创建方式
+ImageData imageData1= new ImageData("D:\\test.bmp");
+//创建Image对象
+Image image = new Image(Display.getDefault(),imageData);
+//使用后一定记得释放自己创建的对象
+image.dispose();
 ```
+
+Display内置了几个常用的Image对象，包括错误图标、警告图标等，可以用getSystemImage方法访问它们。与使用Color的情况相类似，使用完这些对象后也不要释放，如下面代码所示。
+
+```java
+Display display = Display.getDefault();
+Image image = display.getSystemImage(SWT.ICON_ERROR);
+```
+
+#### 3.3.3	使用Font
+
+Font资源管理着显示文本时使用到的字体、字号、格式（粗体、斜体等）各种格式。可以通过指定字体名称、高度和格式创建一个字体，也可以使用Display.getSystemFont得到系统内置的字体。和其他图形资源一样，自己创建的字体用完后一定要释放，而使用系统字体是不能去释放。
+
+可以使用Control.setFont方法设置控件的字体。下面的代码演示了如何创建不同的字体并在Label控件中使用它们。
+
+```java
+public static void main(String[] args){
+  Display display = Display.getDefault();
+  Shell shell = new Shell(display);
+  shell.setSize(140,140);
+  shell.open();
+  Font sysFont = display.getSystemFont();
+  Font createdTahoma = new Font(display,"Tahoma",10,SWT.BOLD);
+  Font createdArial = new Font(display,"Arial",12,SWT.ITALIC);
+  Label label1 = new Label(shell,SWT.NONE);
+  label.setBounds(10,10,100,20);
+  label.setText("Taoma,10,Bold");
+  label.setFont(createdTahoma);
+  while(!shell.isDisposed()){
+    if(!display.readAndDispatch())	display.sleep();
+  }
+  //释放资源
+  createdFahoma.dispose();
+  createArial.dispose();
+  display.dispose();
+}
+```
+
+### 3.4	高级内容
+
+#### 3.4.1	使用系统托盘
+
+SWT允许Java程序想本地程序一样直接访问系统托盘。在SWT中，系统托盘资源由Tray类管理，调用Display.getSystemTray方法，可以得到唯一的Tray实例并操作它，如果所在的平台上没有系统托盘，这个方法会返回null。
+
+得到Tray以后可以通过创建一个TrayItem想系统托盘中添加一个项目，并设置它的图标和提示信息，如下面代码所示。
+
+```java
+public static void main(String[] args){
+  Display display = Display.getDefault();
+  Shell shell = new Shell(display);
+  shell.setSize(120,80);
+  shell.open();
+  Tray sysTray = display.getSystemTray();
+  TrayItem item = new TrayItem(sysTray,SWT.NONE);
+  item.setImage(display.getSystemImage(SWT.ICON_ERROR));
+  //提示文字
+  item.setToolTipText("Test Tray");
+  final Menu menu = new Menu(shell,SWT.POP_UP);
+  MenuItem menuItem = new MenuItem(menu,SWT.PUSH);
+  menuItem.setText("Menu Item");
+  item.addListener(SWT.MenuDetect,new Listener(){
+    public void handleEvent(Event event){
+      menu.setVisible(true);
+    }
+  });
+  while(!shell.isDisposed()){
+    if(!display.readAndDispatch())	display.sleep();
+  }
+  //不再需要系统托盘图标的时候要调用TrayItem.dispose将它释放掉
+  item.dispose();
+  display.dispose();
+}
+```
+
+#### 3.4.2	利用Region构造不规则窗口
+
+Region类型代表的是平面坐标系的由任意个多边形组成的区域。
+
+Region也是一种系统资源。因此使用完毕后也需要调用dispose方法释放掉。
+
+```java
+public static void main(String[] args){
+  Display display = Display.getDefault();
+  //SWT.NO_TRIM表示没有边框，只有这样才能用setRegion来指定它的形状
+  final Shell shell = new Shell(display,SWT.NO_TRIM);
+  Region region = new Region(display);
+  region.add(new Rectangle(10,10,10,100));
+  region.add(new Rectangle(10,100,100,10));
+  region.add(new Rectangle(10,10,100,10));
+  region.add(new Rectangle(100,10,10,100));
+  shell.setRegion(region);
+  Color color = new Color(null,255,0,0);
+  shell.setBackground(color);
+  shell.open();
+  shell.addMouseListener(new MouseAdapter(){
+    public void mouseDown(MouseEvent event){
+      shell.close();
+    }
+  });
+  while(!shell.isDisposed()){
+    if(!display.readAndDispatch())	display.sleep();
+  }
+  region.dispose();
+  color.dispose();
+  display.dispose();
+}
+```
+
+#### 3.4.3	在SWT中使用Swing
+
+Swing是通过AWT的Canvas控件上绘图以显示各种控件；而AWT的控件与SWT的原理相似，都是直接对应到操作系统的控件资源，因此只要用SWT模拟出AWT的Canvas，Swing的控件就可以在其上运行。为此，SWT提供了一个org.eclipse.swt.awt.SWT_AWT类，它通常被肠胃SWT_AWT桥。
+
+在SWT_AWT中，提供了一个方法用于从SWT的Composite容器得到一个AWT的Frame容器`new_Frame(Composite composite)`。
+
+```java
+public static void main(String[] args){
+  Display display = Display.getDefault();
+  Shell shell = new Shell(display);
+  shell.setBounds(100,100,200,100);
+  shell.open();
+  Composite composite = new Composite(shell,SWT.EMBEDDED);
+  composite.setBounds(0,0,200,100);
+  Frame frame = SWT_AWT.new_Frame(composite);
+  frame.setLayout(new BorderLayout());
+  JPanel panel = new JPanel();
+  panel.setLayout(null);
+  frame.add(panel,BorderLayout.CENTER);
+  JButton button = new JButton();
+  button.setBounds(10,10,180,20);
+  button.setText("Swing Button");
+  panel.add(button);
+  while(!shell.isDisposed()){
+    if(!display.readAndDispatch())	display.sleep();
+  }
+}
+```
+
+## 4	使用基本控件与对话框
+
+### 4.1	Button
+
+在GUI界面中，按钮控件Button是使用最为广泛的控件之一。它的主要功能就是对用户的选择动作（鼠标单击控件或当焦点落在控件上事敲空格键）做出反应。下面的代码演示了如何创建并使用不同演示的Button。
+
+```java
+Image image = display.getSystemImage(SWT.ICON_ERROR);
+final Button button = new Button(shell,SWT.NONE);
+button.setImage(image);
+button.setText("push button");
+//指定控件在界面上的位置（前两个值是控件在左上角的坐标，后面两个值是控件的宽度和高度）
+button.setBounds(20,10,150,25);
+final Button checkB = new Button(shell,SWT.CHECK|SWT.RIGHT_TO_LEFT);
+checkB.setImage(image);
+checkB.setText("check button");
+checkB.setBounds(20,45,150,20);
+final Button radioB = new Button(shell,SWT.RADIO);
+radioB.setImage(image);
+radioB.setText("radio button");
+radioB.setBounds(20,70,150,20);
+final Button toggleB = new Button(shell,SWT.TOGGLE);
+toggleB.setImage(Image);
+toggleB.setText("toggle button");
+toggleB.setBounds(20,95,150,25);
+...
+display.dispose();  
+```
+
+Button上面显示的文字可以由setText方法设定，而图片则可以由setImage方法设定。默认情况下，图片显示在文字的左边，而使用样式SWT.RIGHT_TO_LEFT就可以使图片显示在文字右边。
+
+上面的代码使用了Button的4中样式。使用不同样式创建的Button，除了外形有差异外，被选择后的表现也是不同的。最常见的普通按钮被选择时会显示成凹陷的样子，而选择动作结束后可以自动弹回到没有按过的状态。它被称为Push Button（SWT.PUSH）。另外一种Button被按下后不会自动恢复，需要再按一下才能弹起来，这是Toggle Button（SWT.TOGGLE）。单选按钮（Radio Button，样式SWT.TADIO）和复选框（Check Button，样式SWT.CHECK）。
+
+通过Button.getSelection()方法返回的boolean值，可以判定一个Button当前是否处于选中状态。也可以使用SelectionListener中的widgetSelected方法监听这个事件并控制程序做出相应的更改。
+
+```
+button.addSelectionListener(new SelectionAdapter(){
+	public void widgetSelected(SelectionEvent e){
+		System.out.printLn("Push Button Selected");
+	}
+});
+```
+
+在上面的代码中，使用了SelectionAdapter类。SelectionAdapter是SelectionListener的空实现，如果只对监听器接口中某一种事件感兴趣，开发者可以继承这个空实现并重载感兴趣的方法而不用实现整个监听器接口来编写所有的方法。对于拥有多个方法的监听器接口，SWT都提供了类似的空实现并以Adapter为名，如MouseListener->MouseAdapter等。
 
