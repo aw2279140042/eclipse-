@@ -892,3 +892,67 @@ button.addSelectionListener(new SelectionAdapter(){
 
 在上面的代码中，使用了SelectionAdapter类。SelectionAdapter是SelectionListener的空实现，如果只对监听器接口中某一种事件感兴趣，开发者可以继承这个空实现并重载感兴趣的方法而不用实现整个监听器接口来编写所有的方法。对于拥有多个方法的监听器接口，SWT都提供了类似的空实现并以Adapter为名，如MouseListener->MouseAdapter等。
 
+### 4.2	Label
+
+Label是不能被用户操作的控件，它通常用来在界面上显示图片或者不需要修改的文本内容。如下代码。
+
+```java
+final Image image1 = new Image(dispaly,Snippet_4_02.class).getResourceAsStream("image1.bmp");
+final Image image2 = new Image(display,Snippet_4_02.class).getResourceAsStream("image2.bmp");
+final Label label = new Label(shell,SWT.BORDER);
+label.setImage(image1);//显示图片
+label.setBounds(10,70,120,50);
+final Label textLabel = new Label(shell,SWT.BORDER);
+textLabel.setBounds(10,70,120,15);
+textLabel.setText("Image1");//显示文字
+final Button switchButton = new Button(shell,SWT.NONE);
+switchButton.addSelectionListener(new SelectionAdapter(){
+    public void widgetSelected(final SelectionEvent e){
+        label.setImage(image2);
+        textLabel.setText("Image 2");
+    }
+});
+```
+
+<u>与Button不同，Label控件不能同时显示文字和图像，如果对一个Label先设置文字后设置图像，则Label只会显示图像，反之亦然</u>
+
+对Label使用样式SWT.SEPARATOR可以使控件显示成一根水平或者竖直的分割线，使用这个样式后，再对Label使用setImage/setText方法是无效的，分割线的方向需要使用样式SWT.HORIZONTAL或SWT.VERTICAL制定，如果没有制定默认是水平HORIZONTAL。
+
+### 4.3	Text
+
+需要用户输入信息的时候，可以使用文本框Text控件，用户可以在其中输入内容或修改已有的内容。使用getText/setText方法可以得到或者改变Text中的文本内容。如果需要创建一个不可修改的文本框，可以使用SWT.READONLY样式，这时文本框的背景色将又默认的白色变成灰色，当鼠标单击文字的时候依然可以显示编辑光标，也可以拖动鼠标来选择一片文字，对只读的文本框，依然可以使用setText方法来改变它的内容。输入机密信息如密码的时候，使用SWT.PASSWORD样式，这个样式会使文本框将输入的所有文字都显示成密码字符（*），可以使用Text.setEchoChar方法来改变默认的密码字符。
+
+```java
+final Text normalText = new Text(usingTextShell,SWT.BORDER);
+normalText.setBounds(10,10,112,20);
+normalText.setText("abc");
+final Text passwordText = new Text(usingTextShell,SWT.PASSWORD | SWT.BORDER);
+passwordText.setBounds(255,10,112,20);
+passwordText.setText("abc");
+final Text readOnlyText = new Text(usingTextShell,SWT.READ_ONLY | SWT.BORDER);
+readOnlyText.setBounds(375,10,112,20);
+readOnlyText.setText("abc");
+
+```
+
+默认的文本框使单行的，如果需要输入的内容过多，或者需要换行输入，单行的文本框就无法满足要求了。使用样式SWT.MULTI可以创建一个多行文本框，使用样式SWT.V_SCROOL和SWT.H_SCROLL分别控制在多行文本框中是否显示竖直滚动条和水平滚动条。另外还有个仅对多行文本框有效的样式是SWT.WRAP它可以使文本框在一行文字超出控件宽度时自动换行。如果使用了WRAP样式，H_SCROLL样式将被忽略，水平滚动条不会显示。
+
+Text控件可以响应的事件有DefaultSelection，Mondify和Verify。当用户在文本款中输入回车时会触发DefaultSelection事件，通常这意味着用户已经输入完毕，程序可以利用SelectionListener的widgetDefaultSelected方法监听这个事件并处理它。Mondift和Verify事件都是和Text的内容编辑相关的，当用户编辑Text的内容时，会发出一个Verify事件，程序可以检查这个事件并判断所做的修改是否可以接受，如果不能接受，所做的修改将被拒绝，若果内容修改成功，Text会发出一个Mondify事件，通知监听者控件的内容已经改变。
+
+```flow
+st=>start: 用户修改Text控件内容
+sub1=>subroutine: Text向监听者发送Verify事件
+cond=>condition: 所有监听者都Verify成功
+end1=>end: 将Text的内容恢复到改变以前
+end2=>end: Text随用户输入改变显示内容，向监听者发送Mondify事件
+st(right)->sub1(right)->cond
+cond(yes)->end2
+cond(no)->end1
+```
+
+Mondify事件可以用MondifyListener的modifyText方法监听，而Verify事件则要用VerifyListener的verifyText方法监听。下面的代码演示了如何使用Verify事件监听器创建特殊的文本框。
+
+```java
+
+```
+
