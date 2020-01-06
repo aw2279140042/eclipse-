@@ -197,15 +197,16 @@ P[GUI处理原理图]
 JFace是基于SWT的一套图形工具包，它没有为SWT提供任何新的功能，只是将一些比较繁琐而且常用的图形操作封装了起来，是的开发工作变得简便。JFace完全使用SWT API进行开发，并没有涉及任何SWT中平台相关的部分，所以JFace没有不同平台版之分。JFace封装涉及的范围：
 
 ```mermaid
-graph LR
-A[JFace]-->B(Viewer)
-A-->C(Resource Registry)
-A-->D(Field Assist)
-A-->E(Action & Contribution)
-A-->F(Dialogs,Wizard Page Preference Page)
-A-->G(Data Binding)
-
+classDiagram
+JFace<|--Viewer
+JFace<|--Resource Registry
+JFace<|--Field Assist
+JFace<|--Action 和 Contribution
+JFace<|--Dialogs 和 Wizard Page Preference Page
+JFace<|--Data Binding
 ```
+
+
 
 - Viewer 查看器
 - Resource Registry 资源注册表，用于管理和自动释放程序中用到的图形系统资源
