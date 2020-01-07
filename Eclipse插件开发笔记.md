@@ -954,6 +954,176 @@ cond(no)->end1
 Mondify事件可以用MondifyListener的modifyText方法监听，而Verify事件则要用VerifyListener的verifyText方法监听。下面的代码演示了如何使用Verify事件监听器创建特殊的文本框。
 
 ```java
-
+final Text numberText = new Text(shell,SWT.BORDER);
+//检查数字输入框
+numberText.addVerifyListener(new VerifyListener(){
+    public void verifyText(final VerifyEvent e){
+        try{
+            Integer.parseInt(e.text);
+        } catch(Exception exce){
+            e.doit = false;
+        }
+    }
+});
+numberText.setBounds(22,10,138,21);
+final Text upperText = new Text(shell,SWT.BORDER);
+//大写转换框
+upperText.addVerifyListener(new VerifyListener(){
+    public void verifyText(final VerifyEvent e){
+        e.text = e.text.toUpperCase();
+    }
+});
+upperText.setBounds(22,40,138,20);
+shell.open();
 ```
 
+Verify事件发生的时候，监听器会收到一个VerifyEvent类型的对象，其中存储了这次改动事件的具体内容。VerifyEvent.text代表了经用户修改后的文字内容，改动这个字段就等于改动了插入到文本框中的内容；而VerifyEvent.doit设为false，这次修改动作就不会生效，Text的内容也不会被改变。如果所有的VerifyListener都没有改变doit的值，一个Modify事件将会被触发。
+
+### 4.4	List
+
+List控件用列表的形式向用户展示了一组数据，用户可以用鼠标单击其中一项或多项来做出选择，被选择的项会反白显示。
+
+```java
+final List list = new List(listDemoShell,SWT.BORDER);
+list.add("a");
+list.add("b");
+list.add("c");
+list.setBounds(10,10,115,150);
+```
+
+List中每一条列表项被称为一个item，下表列出了可对item进行操作的方法。
+
+| 方法声明                       | 功能                                            |
+| ------------------------------ | ----------------------------------------------- |
+| add(String item)               | 在列表末尾添加一条内容为item的列表项            |
+| add(String item,int index)     | 在由index指定的位置添加内容为item的一项         |
+| setItem(int index,String item) | 将指定位置的列表项内容设为item                  |
+| setItem(String[] items)        | 将列表中所有的内容删除，并用items的内容重设列表 |
+| remove(int index)              | 移除指定位置的列表项                            |
+| remove(int from,int to)        | 移除从from到to的所有项                          |
+| remove(int[] indices)          | 移除indices中指定的所有项                       |
+| remove(String item)            | 移除从前往后第一个内容等于item的项              |
+| getItem(int index)             | 返回一个由index指定的列表项内容                 |
+| getItem()                      | 返回一个包含所有列表项的String数组              |
+| getItemCount()                 | 返回列表项个数                                  |
+
+默认情况下用户只能选择LIst中的一项，如果希望同时选择多项，可以使用SWT.MULTI样式这样就可以按住Ctrl键并单击多项以选择它们。也可以按住Shift键单击两项以选择两者中间的所有项。下面列出了与选择项目相关的操作
+
+| 操作                                                | 功能                                   |
+| --------------------------------------------------- | -------------------------------------- |
+| select(int index) / deselect(int index)             | 选择/取消选择由index指定的项           |
+| select(int from,int to) / deselect(int from int to) | 选择/取消选择从from到to的所有项        |
+| select(int[] indices) / deselect(int[] indices)     | 选择/取消选择indices指定的所有项       |
+| selectAll() / deselectAll()                         | 选择/取消选择所有内容                  |
+| getSelection()                                      | 得到一个String数组表示的当前被选择的项 |
+| getSelectionCount()                                 | 得到当前被选择的项的个数               |
+| getSelectionIndex()                                 | 得到当前被选择的第一项的index          |
+| getSelectionIndices()                               | 得到当前被选择的所有项的index          |
+
+当选中List中某些项时，会触发一个Selection事件，而双击某一项时，除了触发一个Selection事件外，还会触发一个DefaultSelection事件。事件中不包含哪一个列表项被选中的内容，程序要调用List的对应的方法取得这些信息。下面的代码监听List的事件并相应的改变列表项的内容，单击某一项时，列表项的内容会加上“selected”字样，当这一下被取消选择时，内容会恢复。
+
+```java
+final List list = new List(listDemoShell,SWT.BORDER);
+list.addSelectionListener(new SelectionListener(){
+    private int oldIndex = -1;
+    private String oldContent = null;
+    public void widgetSelected(final SelectionEvent e){
+        if(oldIndex !=-1)	list.setItem(oldIndex,oldContent);
+        int index = list.getSelectionIndex();
+        oldIndex = index;
+        oldContent = list.getItem(index);
+        list.setItem(index,oldContent+" selected");
+    }
+    public void widgetDefaultSelected(final SelectionEvent e){
+        if(oldIndex !=-1)	list.setItem(oldIndex,oldContent);
+        int index = list.getSelectionIndex();
+        oldIndex = index;
+        oldContent = list.getItem(index);
+        list.setItem(index,oldContent+" default selected");
+    }
+});
+```
+
+### 4.5	Combo
+
+Combo控件由一个文本框和一个列表组合而成，当单击文本框右侧的按钮时，会出现一个下拉列表，用户可以在文本框中输入或修改内容，也可以选择列表中预定义的内容。Combo的功能与LIst控件类似，但它比List占用更小的界面控件，因此在界面有限的情况下，可以考虑用Combo代替LIst。下面的代码创建了一个Combo并向其中添加了6个选择项。
+
+```java
+Combo combo = new Combo(shell,SWT.NONE);
+combo.setItem(new String[]{"a","b","c","d"});
+combo.add("abc");
+combo.add("def");
+```
+
+Combo中列表项的方法和操作完全和操作LIst时完全一样的，但是在选择方面略有不同。Combo无法支持同时选择多项内容（选择的内容要显示在文本框中，选择多项无法显示）。因此Combo对选择项的操作如下
+
+| 方法                | 功能                     |
+| ------------------- | ------------------------ |
+| select(int index)   | 选择index项              |
+| deselect(int index) | 取消对第index项的选择    |
+| deselectAll()       | 取消全部选择，文本框清空 |
+
+默认样式的Combo会在文本框右边显示一个下拉箭头的Button（参加Button控件的ARROW样式），单击它会展开列表，这是Combo控件默认的样式SWT.DROP_DOWN。与DROP_DOWN相对的是SWT.SIMPLE样式。使用SIMPLE样式时，下来箭头的Button不会显示，这时Combo会显示成一个上面是Text下面是List的控件，这种样式的Combo比较少用。
+
+与Text控件相似，可以使用SWT.READ_ONLY样式来创建一个不可编辑的Combo，这时Combo的数据就只能从列表中选择。需要注意，READ_ONLY样式只能和PUSH_DOWN一起使用。如果同时使用SIMPI和READ_ONLY样式，READ_ONLY会失效，创建出来的Combo依然是可以编辑的。
+
+从列表框选择预定义的内容时，会同时出发Combo的Selection事件和Modify事件。而直接编辑Combo的内容时，只会触发Modify事件。与Text不同，Combo不支持Verify事件。
+
+```java
+combo.addModifyListener(new ModifyListener(){
+    public void modifyText(ModifyEvent e){
+        Combo combo = (Combo) e.widget;
+        String text = combo.getText();
+        System.out.println("combo text is "+text);
+    }
+});
+```
+
+### 4.6	ToolBar和ToolItem
+
+ToolBar窗口工具栏控件，ToolItem为工具栏项。
+
+```java
+final TooBar horToolBar = new ToolBar(shell,SWT.FLAT | SWT.WRAP);
+horToolBar.setBounds(0,0,265,50);
+Image toolBarImage1 = new Image(display,UsingToolBar.class.getResourceAsStream("toolbar1.gif"));
+final ToolItem toolItem1 = new ToolItem(horToolBar,SWT.NONE);
+toolItem1.setImage(toolBarImage1);
+toolItem1.setToolTipText("提示");
+toolItem1.setText("Item1");
+toolBarImage1.dispose();
+display.dispose();
+```
+
+和其他控件一样，ToolBar可以放置在窗口的任何位置，不过习惯上将它放在窗口边缘。可以使用SWT.HORIZONTAL（默认 横）和SWT.VERTICAL（竖）设置工具栏按钮的排列方向。
+
+默认情况下按钮上的文字是显示在图片的下方的，如果对ToolBar使用RIGHT样式，文字就会显示在按钮右边。当ToolItem占用的长度超过了ToolBar的长度默认越界的ToolItem会无法显示，这时需要使用WRAP样式。这个样式可以使ToolBar将越界的ToolItem自动移到下一行显示。
+
+![image-20200107224658766](Eclipse插件开发笔记.assets/image-20200107224658766.png)
+
+ToolItem仅支持Selection一种事件。当工具栏按钮被单击时，对应的ToolItem触发一个Selection事件，如下面代码所示，程序响应这个事件就可以实现工具栏操作。
+
+```java
+toolItem.addSelectionListener(new SelectionAdapter(){
+	public void widgetSelectEd(final SelectionEvent e){
+		//处理事件
+	}
+});
+```
+
+如果普通的工具栏按钮不能满足需求，也可以将其他控件，如Text、Combo等放置在工具栏上。使用`setControl`方法。
+
+### 4.7	Menu和MenuItem
+
+菜单和菜单项，通常所见的菜单有两种形式，一种是单击窗口的菜单栏出现的下拉菜单；另一种是界面上单击右键出现的弹出式菜单。
+
+为一个窗口添加菜单栏时，需要使用Menu的BAR样式。与可以任意摆放的ToolBar不同，菜单栏只能在窗口的顶部，无法调整位置，也没有什么样式可以自定义显示风格。下面的代码在窗口中创建了一个菜单栏并将它显示在界面上。
+
+```java
+Menu bar = new Menu(shell,SWT.BAR);
+shell.setMenuBar(bar);
+```
+
+创建Menu的语法和其他的控件没有区别，但是多了一句`shell.setMenuBar`。SWT时不允许在一个窗口中显示多个菜单栏的，程序可以创建任意多个Menu实例，但是只有一个可以作为窗口的菜单栏显示。
+
+有了菜单栏后，就可以像其中添加下拉菜单了。一个下拉菜单有一个使用了CASCADE样式的MenuItem实例和一个Menu实例组成。MenuItem负责在菜单栏上显示一个可单击的位置，当用户选择这个位置时显示对应的下拉菜单；而Menu控制着下拉菜单的具体内容。项下拉菜单中添加菜单项时，需要使用MenuItem的PUSH样式，这个是MenuItem的默认样式。
