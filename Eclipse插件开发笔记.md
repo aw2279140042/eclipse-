@@ -1127,3 +1127,22 @@ shell.setMenuBar(bar);
 创建Menu的语法和其他的控件没有区别，但是多了一句`shell.setMenuBar`。SWT时不允许在一个窗口中显示多个菜单栏的，程序可以创建任意多个Menu实例，但是只有一个可以作为窗口的菜单栏显示。
 
 有了菜单栏后，就可以像其中添加下拉菜单了。一个下拉菜单有一个使用了CASCADE样式的MenuItem实例和一个Menu实例组成。MenuItem负责在菜单栏上显示一个可单击的位置，当用户选择这个位置时显示对应的下拉菜单；而Menu控制着下拉菜单的具体内容。项下拉菜单中添加菜单项时，需要使用MenuItem的PUSH样式，这个是MenuItem的默认样式。
+
+下面的代码演示了如何创建菜单栏和子菜单。
+
+```java
+Image menu1 = new Image(Display.getDefault(),Snippet_4_07_1.class.getResourceAsStream("menu1.gif"));
+Image menu2 = new Image(Display.getDefault(),Snippet_4_07_1.class.getResourceAsStream("menu2.gif"));
+//代表菜单栏中的Menu对象
+Menu bar = new Menu(shell,SWT.BAR);
+shell.setMenuBar(bar);
+//菜单栏上创建一个菜单项
+MenuItem fileMenuItem = new MenuItem(bar,SWT.NONE);
+fileMenuItem.setImage(menu1);
+fileMenuItem.setText("File");
+MenuItem otherMenuItem = new MenuItem(bar,SWT.PUSH);
+otherMenuItem.setText("Other");
+final Menu fileMenu = new Menu(fileMenuItem);
+fileMenuItem.setMenu(fileMenu);
+```
+
