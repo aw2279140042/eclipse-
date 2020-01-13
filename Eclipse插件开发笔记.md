@@ -1157,7 +1157,88 @@ final CoolItem coolItem1 = new CoolItem(coolBar,SWT.PUSH);
 final Button button1 = new Button(coolBar,SWT.NONE);
 button1.setText("button1");
 button1.setSize(25,25);
+//向其中添加一个BUTTON
 coolItem1.setControl(button1);
-coolItme1.setSize(coolItem1.computeSize(25,25));
+coolItem1.setSize(coolItem1.computeSize(25,25));
 ```
+
+代码首先创建了一个Coolbar，然后向其中放入了1个CoolItem，又在每个CoolItem中个放置一个Button来显示工具栏中的按钮，CoolItem使用setControl方法设定它里面包含的控件。与ToolItem不同，CoolItem本身不触发任何事件，事件是交由其中包含的控件自行管理的。
+
+理论上，所有的控件都可以放在CoolItem里面显示，然而某些占用控件过大的控件，如List等是不适合在其中放置的。工具栏可以拖动是一个好功能，但是有时为了防止用户的误操作，可能希望禁止它。可以使用CoolBar.setLocked(true)来禁止CoolBar中的item被重新排列。
+
+为每个工具栏按钮安排一个CoolItem，这样它们就可以被任意排列，但是如果希望将某几个按钮固定的分在一组中，CoolBar就无能为力了，而且CoolItem中的Button是不能像ToolItem中或普通的Button控件一样同时显示图片和文字，这些问题可以很容易的通过将ToolBar放到CoolBar里面解决。
+
+```java
+final CoolBar coolBar = new CoolBar(shell, SWT.NONE);
+coolBar.setBounds(0, 0, 400, 30);
+final CoolItem coolItem1 = new CoolItem(coolBar,SWT.PUSH);
+final ToolBar toolBar1 = new ToolBar(coolBar,SWT.NONE);
+ToolItem item10 = new ToolItem(toolBar1,SWT.NONE);
+item10.setImage(display.getSystemImage(SWT.ICON));
+ToolItem item11 = new ToolItem(toolBar1,SWT.NONE);
+item11.setImage(display.getSystemImage(SWT.ICON_QUESTION));
+coolItem1.setControl(toolBar1);
+//使ToolBar计算其自身尺寸后，得到它的尺寸用来设置CoolItem的尺寸
+toolBar1.pack();	coolItem1.setSize(coolItem1.computeSize(toolBar1.getSize().x, toolBar1.getSize().y));
+		
+```
+
+在每一个CoolItem中放置一个ToolBar，再将需要分组的按钮作为同一个ToolBar的ToolItem，就可以实现既可以让用户拖动，又可以保持分组不变的强大工具栏。
+
+### 4.9	TabFolder和TabItem
+
+使用TabFolder可以将多个页面层叠排列，并为每一个页面显示一个选项卡，当用户点击这些选项卡时，可以切换位于最上层的页面，TabFolder中每一个选项卡由一个TabItem管理。TableFolder的选项卡默认是处于上方的，可以使用SWT.BOTTOM样式使它显示在下端。
+
+在选项卡上面，也是可以显示文字和图片的。下面的代码在窗口上创建了一个TableFolder并在其中添加了两个选项卡。
+
+```java
+final TabFolder tabFolder = new TabFolder(shell,SWT.NONE);
+tabFolder.setBounds(10,10,242,234);
+final TabItem tabItem1 = new TabItem(tabFolder,SWT.NONE);
+tabItem1.setImage(display.getSystemImage(SWT.ICON_QUESTION));
+tabItem1.setText("Tab 1");
+final Composite composite1 = new Composite(tabFolder,SWT.NONE);
+tabItem.setControl(composite1);
+final TabItem tabItem2 = new TabItem(tabFolder,SWT.NONE);
+tabItem2.setText("Tab 2");
+tabItem2.setImage(display.getSystemImage(SWT.ICON_QUESTION));
+```
+
+于上一节讲到的CoolItem类似，TabItem是通过setControl方法设置其中显示的控件中。这个方法不能接受多个控件作为参数，而程序通常需要在TabItem中放置很多内容。这时，就需要先在TabItem中放一个Composite控件，然后再在Composite中放置其他控件。Composite这种专门用来容纳其他控件的控件被称为容器。
+
+当用户切换选项卡时，TabFolder会发送一个Selection事件。但是与处理List时的情况类似，这个事件并不包含哪一个TabItem被选中的信息。可以使用TabFolder的getSelectionIndex或getSelections方法得到被选中的TabItem并作出相应的处理，不过通常情况下开发者不需要关心这个事件。
+
+### 4.10	对话框
+
+操作系统为许多通用信息提供了标准的对话框。
+
+#### 4.10.1	消息框
+
+```java
+MessageBox mb = new MessageBox(shell,SWT.ICON_ERROR|SWT.OK);
+//标题
+mb.setText("Error");
+//消息
+mb.setMessage("you have encountered an error!");
+int result = mb.open();
+if(SWT.OK == result){
+    //用户点击的时ok
+}
+```
+
+创建MessageBox时需要指定一个父Shell和指定样式。样式由图标和按钮两部分组成。图标样式决定显示的图标。
+
+![image-20200113234128575](Eclipse插件开发笔记.assets/image-20200113234128575.png)
+
+按钮样式决定着在消息框中显示那些按钮。
+
+![image-20200113234242734](Eclipse插件开发笔记.assets/image-20200113234242734.png)
+
+在显示对话框时可以任意选择一个按钮组合，课可以使用组合中的某个子集，但是如果试图使用不同组合中的按钮，消息框只会显示一个OK按钮。
+
+![image-20200113234641715](Eclipse插件开发笔记.assets/image-20200113234641715.png)
+
+无论用户在消息框单击了什么按钮，消息框都会关闭。在打开消息框时，调用了open方法这个方法返回值是一个整形。它表示了被单击的按钮信息。
+
+#### 4.10.2	文件与目录对话框
 
