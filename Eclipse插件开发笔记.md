@@ -549,7 +549,7 @@ UI线程->后台线程:创建
 后台线程-->>UI线程:同步
 ```
 
-Display维护了衣蛾自定义的事件队列，这个队列就是用来供后台线程和UI线程同步的。后台线程用Runnable对象将绘图操作包装起来，然后将对象插入到事件队列中，这样Display执行消息循环时就会执行这些操作了。Display提供了如下两个方法向这个队列中插入事件。
+Display维护了一个自定义的事件队列，这个队列就是用来供后台线程和UI线程同步的。后台线程用Runnable对象将绘图操作包装起来，然后将对象插入到事件队列中，这样Display执行消息循环时就会执行这些操作了。Display提供了如下两个方法向这个队列中插入事件。
 
 | Display.syncExec(Runnable runnable)  | 同步调用，调用这个方法会通知UI线程在下一次事件循环时执行runnable参数的run方法，调用这个方法的线程将被阻塞到runnable执行完成。如果参数为null，调用这个函数会唤醒休眠中的UI线程 |
 | ------------------------------------ | ------------------------------------------------------------ |
@@ -1241,4 +1241,146 @@ if(SWT.OK == result){
 无论用户在消息框单击了什么按钮，消息框都会关闭。在打开消息框时，调用了open方法这个方法返回值是一个整形。它表示了被单击的按钮信息。
 
 #### 4.10.2	文件与目录对话框
+
+需要让用户选择文件或者目录的时候可以使用文件与目录对话框。
+
+文件对话框对应的SWT类型是FileDialog。创建FileDialog时，有三种样式可以选择，SAVE,OPEN和MULTI。选择SAVE样式时，对话框会显示为“另存为”；选择OPEN/MULTI样式时，标题则是“打开”；如果选择了MULTI样式，可以在对话框中选择多个文件，而使用OPEN样式则只能选择一个文件。下面的代码创建了一个SAVE对话框并打开它。
+
+```java
+FileDialog fileDialog = new FileDialog(shell,SWT.SAVE);
+fileDialog.open();
+```
+
+FileDialog.setFileName可以用来设定文件对话框打开时默认的文件名。比如可以为SAVE对话框中的文件名默认命名为“Default”或者其他内容。
+
+在文件对话框中，有一个文“件类型”的下拉框，只有扩展名与选择的类型相同的文件才会显示在对话框中，这被称为文件对话框的过滤器（Filter），使用FileDalog的两个方法setFilterExtensions和setFilterNames可以为文件对话框配置过滤器，代码如下所示。
+
+```java
+fileDialog.setFilterNames(new String[]{"Text Files","Executable Files","Both Files","All Files"});
+fileDialog.setFilterExtensions(new String[]{"*.txt","*.exe","*.txt;*.txt","*.*"});
+```
+
+可以看出，两个数组分别声明了在“文件类型”组合框中显示的内容和它对应的文件扩展名。可以用分号分割多个扩展名，并且使用“*”通配符来表示任何字。
+
+默认情况下FileDialog在代开的时候会将目录自动设定为系统目录。自定义打开时的母女需要使用FileDialog.setFilterPath方法设定。下面的代码将默认的目录设定为D盘根目录。
+
+```java
+fileDialog.setFilterPath("D:\\");
+```
+
+为了得到用户选择的文件信息，可以使用FileDialog.getFileNames方法，它会将用户选择的文件相对于filterPath的路径以一个String数组的形式返回；另外FileDialog.open/FileDialog.getFileName方法也会返回一个代表文件绝对路径的String，但是它们只适用于对话框样式非MULTI，如果选择了多个文件，调用这两个方法只会返回第一个文件的路径。如果用户在对话框中没有选择确定而是取消上面的方法返回Null。
+
+```java
+FileDialog fileDialog = new FileDialog(shell,SWT.MULTI);
+if(null!=fileDialog.open()){
+    String[] files = fileDialog.getFileNames();
+    for(int i =0;i<files.length;i++){
+        System.out.println(fileDialog.getFilterPath()+files[i]);
+    }
+}
+```
+
+目录对话框所对应的SWT类是DirectoryDialog。DirectoryDialog没有可以自定义的样式，它的操作相对来说也简单一些，创建一个directoryDialog后，条用其open方法可以打开对话框，open返回的值就是所选择的目录的绝对路径，使用setFilterPath可以设定对话框的初始目录。下面的代码演示了如何使用一个DirectoryDialog。
+
+```java
+DirectoryDialog dirDialog = new DirectoryDialog(shell);
+dirDialog.setFilterPath("D:\\");
+System.out.println(dirDialog.open());
+```
+
+#### 4.10.3 颜色对话框
+
+颜色对话框（ColorDialog）显示一个调色板并允许用户在其中选择一种颜色。
+
+ColorDialog的open方法会返回一个RGB的实例，代表了用户选择的颜色类型。下面个的代码演示了如何显示一个颜色对话框并获得用户选择的颜色。
+
+```java
+ColorDialog cd = new ColorDialog(shell);
+RGB rgb = cd.open();
+if(rgb != null){
+    Color color = new Color(Display.getDefault(),rgb);
+    //use color
+    color.dispose();
+}
+```
+
+#### 4.10.4 字体对话框
+
+字体对话框列出当前系统中所有可用的字体供用户选择。在这里也可以设定粗体、斜体等属性。字体对话框中除了包含字体信息外，还包含颜色的其他信息。
+
+```java
+FontDialog fd = new FontDialog(shell);
+FontData data = fd.open();
+//获取颜色信息
+RGB fontColor = fd.getRGB();
+if(data != null){
+    Font font = new Font(Display.getDefault(),data);
+    Color color = new Color(Display,getDefault(),fontColor);
+}
+```
+
+## 5 容器与布局管理器
+
+能够容纳其他控件的控件被称为容器类控件，它们较少同用户进行直接交互，而主要是用户划分屏幕区域，将其他控件分组排布等目的。在容器类控件中，还有一个重要的概念是布局管理器，它专门用户管理容器中的控件的位置、尺寸和排列。本章将着重介绍SWT中常用的几种容器，说明如何设置容器的外观、上下文菜单等技术，最后将介绍常用的布局管理器，并讲述如何自定义一个布局管理器。
+
+**本章内容包括**
+
+- Composite和Group
+- Shell
+- 容器上下文菜单设置
+- 容器颜色、背景和鼠标指针设置
+- 布局管理器概述
+
+### 5.1 Composite
+
+Composite容器是SWT控件体系中最基本的容器类型，是其他所有容器类型的父类。
+
+Composite的实际思想给予设计模式中的Composite模式，利用容器来包含其他容器或基本控件，可以将控件组合成树状的结构。一个Composite容器中可以包含任意多的基本控件或子容器控件，父容器项处理基本控件一样对子容器发送各种消息，而子容器在接收到这些消息后，再负责通知包含在其中的控件。这种层状结构有利于车技模块化的程序，能够方便的因对结构的变化，也为系统提供更好的扩展性，时几乎所有GUI设计系统都会使用的模式。
+
+与基本控件一样，在创建Composite时，也需要一个父控件，下面的代码在一个Shell中创建了一个有边框的Composite。
+
+```java
+shell.setSize(100,120);
+Composite composite = new Composite(shell,SWT.BORDER);
+composite.setBounds(10,10,90,40);//左上宽高
+```
+
+使用有边框的Composite可以很轻松的将其中搞得内容同用户界面的其他部分区分开来，而使用没有边框的Composite则有助于将容器中的内容无缝的集成到界面上。
+
+对包含在其中的Radio Button，Composite容器默认提供了排他性，即包含在同一个Composite容器中的Radio Button最多只有一个处于选中状态。这种默认行为为使用Radio Button提供了方便，但是使用中需要注意，这种排他性只会应用于直接包含在这个Composite中的Radio Button，而不会应用到子容器中的Radio Button。在创建Composite对象时，通过设定样式`NO_RADIO_GROUP`可以改变这一行为，允许其中的Radio Button被同时选中。
+
+在创建Composite时，还可以使用一种比较有趣的样式，即`RIGHT_TO_LEFT`。
+
+**RIGTH_TO_LEFT**这个样式会将容器中单选按钮和复选框的文字都由右边移到左边，而Label和Text的文字会变成右对齐，需要注意的是==这种样式会影响到所有包含在容器中的控件，而且如果父容器的Composite使用了该样式，包含在子容器内的控件一样会按照右对齐的方式显示出来==
+
+**EMBEDDED**样式的用法与其他不同，它的目的不在于调整Composite的显示样式，而更类似于一种标志，使用这个样式的Composite容器通常不用来摆放其他SWT控件，而是用来显示非SWT(如AWT,Swing等)的GUI内容。EMBEDDED样式的Composite在SWT与其他GUI内容中起到了桥梁的作用。
+
+将相关的基本控件用Composite容器组合起来构成复合控件，不仅能够使界面更加赶紧整齐，对于开发人员来说也是一种好的编程习惯。这使得代码更加易于理解和修改。也能够更好的应对需求的变动。
+
+如果有一组相关的控件，它们之间有复杂的相互控制逻辑，而且这组控件在系统中又会被比较平法你的使用到，推荐的解决方案是创建一个Composite的子类，将这些控件添加进去，便是事件处理代码控制它们，并且在其他地方把这个子类当成一个基本控件来使用，这也是实现图形代码重用的一个好方法。下面通过一个实例来看一下如何利用Composite包装GUI代码，以创建自定义的控件。
+
+```java
+public class MyControl extends Composite{
+    private Button button;
+    private Text text;
+    private int count=0;
+    
+    public MyCountrol(Composite parent,int style){
+        super(parent,style);
+        setLayout(null);
+        text = new Text(this,SWT.READ_ONLY | SWT.BORDER);
+        text.setBounds(5,5,50,20);
+        text.setText(String.valueOf(count));
+        button = new Text(this,SWT.NONE);
+        button.setBounds(60,5,50,20);
+        button.addSelectionListener(new SelectionAdapter(){
+            public void widgetSelected(final SelectionEvent e){
+                text.setText(String.valueOf(++count));
+            }
+        });
+        button.setText("button");
+    }
+    
+}
+```
 
