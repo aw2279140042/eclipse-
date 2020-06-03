@@ -142,7 +142,26 @@ Struts框架支持，可以更方便更容易的集成Struts框架
 - spring-web
 - Struts
 
-### 
+### spring-remoting.jar
+
+包含支持EJB、远程调用Remoting（RMI、Hessian、Http Invoker、JAX-RPC）方面的类。
+
+外部依赖
+
+- spring-aop
+- spring-context,spring-web,Hessian,Burlap,JAX-RPC,EJB API
+
+### spring-jmx.jar
+
+提供了对JMX的支持类。
+
+外部依赖
+
+- spring-beans
+- spring-aop
+- JMX API
+
+
 
 
 
