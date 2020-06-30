@@ -12,7 +12,7 @@ pie
 ```mermaid
 %%状态图
 stateDiagram
-	[*] -->Still
+	[*] -->Still: ss
 	Still -->[*]
 	
 	Still --> Moving
